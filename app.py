@@ -7,10 +7,13 @@ st.set_page_config(page_title="Aplicativo de Apostas", page_icon="🏆", layout=
 st.title("Bem-vindo ao Aplicativo de Apostas")
 st.write("""
     Este aplicativo permite analisar estratégias de apostas com base em dados históricos.
+    Estatística quantitativa é um método que usa números para testar hipóteses e estabelecer relações entre variáveis.
+    Com base em evidências, permite fazer previsões e tirar conclusões. 
+    
     Use a barra lateral para navegar entre as páginas:
     - **Dashboard**: Visão geral dos dados.
-    - **Back Home**: Estratégia para apostas no time da casa.
-    - **Under -2,5**: Estratégia para menos de 3 gols no jogo.
+    
+    
 """)
 
 
