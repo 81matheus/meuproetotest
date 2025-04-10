@@ -1,7 +1,7 @@
 import streamlit as st
 
 # Configuração geral
-st.set_page_config(page_title="Aplicativo de Apostas", page_icon="⚽", layout="wide")
+st.set_page_config(page_title="Aplicativo de Apostas", page_icon="🏆", layout="wide")
 
 # Página inicial
 st.title("Bem-vindo ao Aplicativo de Apostas")
