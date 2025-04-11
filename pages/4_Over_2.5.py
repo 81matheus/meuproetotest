@@ -61,44 +61,90 @@ APPROVED_LEAGUES = set([
 # Título da aplicação
 st.title("Estratégias Over 2.5")
 
-# Função genérica de Backtest
+# Função genérica de Backtest (mantida como no seu exemplo)
 def run_backtest(df, estrategia_func, estrategia_nome):
-    # Filtrar pela Odd_H_Back maior que 1.30
+     # Filtrar pela Odd_H_Back maior que 1.30
     df = df[df['Odd_Over25_FT_Back'] >= 1.3]
      # Aplicar a estratégia
     df_filtrado = estrategia_func(df)
     df_filtrado['Total_Goals'] = df_filtrado['Goals_H'] + df_filtrado['Goals_A']
-    df_filtrado['Profit'] = df_filtrado.apply(
-        lambda row: (row['Odd_Over25_FT_Back'] - 1) if row['Total_Goals'] > 2 else -1,
-    axis=1
-    )
-    total_jogos = len(df_filtrado)
-    # acertos = len(df_filtrado[df_filtrado['Goals_H'] > df_filtrado['Goals_A']])
-    acertos = len(df_filtrado[df_filtrado['Total_Goals'] > 2])
-    taxa_acerto = acertos / total_jogos if total_jogos > 0 else 0
-    lucro_total = df_filtrado['Profit'].sum()
     
+    # Verifica se o df_filtrado não está vazio antes de calcular o Profit
+    if not df_filtrado.empty:
+        df_filtrado['Profit'] = df_filtrado.apply(
+            lambda row: (row['Odd_Over25_FT_Back'] - 1) if row['Total_Goals'] > 2 else -1,
+            axis=1
+        )
+        total_jogos = len(df_filtrado)
+        acertos = len(df_filtrado[df_filtrado['Total_Goals'] > 2])
+        taxa_acerto = acertos / total_jogos if total_jogos > 0 else 0
+        lucro_total = df_filtrado['Profit'].sum()
+    else:
+        # Define valores padrão se não houver jogos após o filtro da estratégia
+        total_jogos = 0
+        acertos = 0
+        taxa_acerto = 0
+        lucro_total = 0.0
+        # Retorna um DataFrame vazio com as colunas esperadas se necessário, 
+        # ou ajusta a lógica downstream para lidar com df_filtrado vazio.
+        # Aqui, vamos garantir que df_filtrado tenha a coluna Profit se não estiver vazio
+        # Se estiver vazio, o retorno abaixo lida com isso.
+
     return {
         "Estratégia": estrategia_nome,
         "Total de Jogos": total_jogos,
         "Taxa de Acerto": f"{taxa_acerto:.2%}",
         "Lucro Total": f"{lucro_total:.2f}",
-        "Dataframe": df_filtrado
+        "Dataframe": df_filtrado # Pode ser um DataFrame vazio
     }
 
-# Análise das médias
+# Análise das médias E LUCROS RECENTES <--- MODIFICADA
 def check_moving_averages(df_filtrado, estrategia_nome):
+    # Garante que a coluna 'Profit' existe se o DataFrame não for vazio
+    # Se df_filtrado veio de run_backtest e não estava vazio, 'Profit' deve existir.
+    # Se df_filtrado estava vazio, as operações abaixo retornarão 0 ou médias 0.
+
+    if df_filtrado.empty:
+        # Retorna valores padrão se não houver dados para analisar
+        return {
+            "Estratégia": estrategia_nome,
+            "Média 8": "0.00% (0 acertos em 0)",
+            "Média 40": "0.00% (0 acertos em 0)",
+            "Lucro Últimos 8": "0.00 (em 0 jogos)",
+            "Lucro Últimos 40": "0.00 (em 0 jogos)",
+            "Acima dos Limiares": False
+        }
+        
+    # Calcula acerto (como antes)
     df_filtrado['Acerto'] = (df_filtrado['Total_Goals'] > 2).astype(int)
-    ultimos_8 = df_filtrado.tail(8) if len(df_filtrado) >= 8 else df_filtrado
-    ultimos_40 = df_filtrado.tail(40) if len(df_filtrado) >= 40 else df_filtrado
-    media_8 = ultimos_8['Acerto'].sum() / 8 if len(ultimos_8) == 8 else ultimos_8['Acerto'].mean()
-    media_40 = ultimos_40['Acerto'].sum() / 40 if len(ultimos_40) == 40 else ultimos_40['Acerto'].mean()
-    acima_das_medias = media_8 >= 0.5 and media_40 > 0.5
     
+    # Seleciona os últimos jogos
+    ultimos_8 = df_filtrado.tail(8) 
+    ultimos_40 = df_filtrado.tail(40) 
+    
+    # Calcula a média de acertos (usando .mean() para robustez)
+    media_8 = ultimos_8['Acerto'].mean() if not ultimos_8.empty else 0
+    media_40 = ultimos_40['Acerto'].mean() if not ultimos_40.empty else 0
+    
+    # --- NOVO: Calcula o lucro dos últimos jogos ---
+    lucro_8 = ultimos_8['Profit'].sum()
+    lucro_40 = ultimos_40['Profit'].sum()
+    # ---------------------------------------------
+    
+    # Verifica se as médias estão acima dos limiares (usando médias calculadas com .mean())
+    # acima_das_medias = media_8 >= 0.70 and media_40 > 0.7 
+    acima_das_medias = lucro_8 >= 0.1 and lucro_40 > 0.1 and media_8 >= 0.5 and media_40 > 0.5
+
+    # Retorna o dicionário com as novas informações de lucro
     return {
         "Estratégia": estrategia_nome,
-        "Média 8": f"{media_8:.2f} ({ultimos_8['Acerto'].sum()} acertos em {len(ultimos_8)})",
-        "Média 40": f"{media_40:.2f} ({ultimos_40['Acerto'].sum()} acertos em {len(ultimos_40)})",
+        # Formatando médias como porcentagem e incluindo contagem
+        "Média 8": f"{media_8:.2%} ({ultimos_8['Acerto'].sum()} acertos em {len(ultimos_8)})", 
+        "Média 40": f"{media_40:.2%} ({ultimos_40['Acerto'].sum()} acertos em {len(ultimos_40)})", 
+        # --- NOVO: Incluindo os lucros formatados ---
+        "Lucro Últimos 8": f"{lucro_8:.2f} (em {len(ultimos_8)} jogos)",
+        "Lucro Últimos 40": f"{lucro_40:.2f} (em {len(ultimos_40)} jogos)",
+        # ------------------------------------------
         "Acima dos Limiares": acima_das_medias
     }
 
@@ -1617,9 +1663,15 @@ if uploaded_historical is not None:
                      else:
                          st.write("Nenhum jogo encontrado para as estratégias após filtros.")
 
-                with st.expander("📈 Análise das Médias"):
-                    st.subheader("Detalhes das Médias")
-                    st.dataframe(pd.DataFrame(medias_results))
+                #with st.expander("📈 Análise das Médias"):
+                    #st.subheader("Detalhes das Médias")
+                    #st.dataframe(pd.DataFrame(medias_results))
+                   # Exibir análise das médias (o DataFrame resultante já terá as novas colunas)
+                with st.expander("📈 Análise das Médias e Lucros Recentes"): # Nome atualizado
+                 st.subheader("Detalhes das Médias e Lucros Recentes")
+                # Cria o DataFrame a partir dos resultados, incluindo as novas chaves
+                 df_medias = pd.DataFrame(medias_results) 
+                 st.dataframe(df_medias) # O dataframe exibido agora incluirá as colunas de lucro    
 
                 # Upload dos jogos do dia
                 estrategias_aprovadas = [nome for nome, (_, acima) in resultados.items() if acima]
@@ -1666,8 +1718,8 @@ if uploaded_historical is not None:
                                              estrategia_func_diaria = mapa_estrategias_diarias[estrategia_nome]
                                              jogos_aprovados = analyze_daily_games(df_daily.copy(), estrategia_func_diaria, estrategia_nome)
                                              if jogos_aprovados is not None and not jogos_aprovados.empty:
-                                                 #st.subheader(f"{estrategia_nome}")
-                                                 #st.dataframe(jogos_aprovados)
+                                                 # st.subheader(f"{estrategia_nome}")
+                                                 # st.dataframe(jogos_aprovados)
                                                  jogos_aprovados_total.extend(jogos_aprovados.to_dict('records'))
                                          else:
                                              st.info(f"Estratégia '{estrategia_nome}' não aplicável aos dados do dia.")
