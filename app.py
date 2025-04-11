@@ -4,7 +4,7 @@ import streamlit as st
 st.set_page_config(page_title="Aplicativo de Apostas", page_icon="🏆", layout="wide")
 
 # Página inicial
-st.title("Bem-vindo ao Aplicativo de Apostas")
+st.title("Bem-vindo ao Aplicativo de Apostas Estatístico")
 st.write("""
     Este aplicativo permite analisar estratégias de apostas com base em dados históricos.
     Estatística quantitativa é um método que usa números para testar hipóteses e estabelecer relações entre variáveis.
